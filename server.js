@@ -16,7 +16,7 @@ app.use(express.json());
 // ✅ ensure uploads folder exists
 
 if (!fs.existsSync("uploads")) {
-fs.mkdirSync("uploads");
+    fs.mkdirSync("uploads");
 }
 
 
@@ -25,105 +25,105 @@ fs.mkdirSync("uploads");
 
 const storage = multer.diskStorage({
 
-destination: (req,file,cb)=>{
-cb(null,"uploads/");
-},
+    destination: (req, file, cb) => {
+        cb(null, "uploads/");
+    },
 
-filename: (req,file,cb)=>{
-cb(null, Date.now() + path.extname(file.originalname));
-}
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + path.extname(file.originalname));
+    }
 
 });
 
 
 const upload = multer({
 
-storage,
+    storage,
 
-fileFilter:(req,file,cb)=>{
+    fileFilter: (req, file, cb) => {
 
-if(file.mimetype==="application/pdf"){
+        if (file.mimetype === "application/pdf") {
 
-cb(null,true);
+            cb(null, true);
 
-}else{
+        } else {
 
-cb(new Error("Only PDF allowed"));
+            cb(new Error("Only PDF allowed"));
 
-}
+        }
 
-}
+    }
 
 });
 
 
 const openai = new OpenAI({
 
-apiKey: process.env.OPENAI_API_KEY
+    apiKey: process.env.OPENAI_API_KEY
 
 });
 
 
 
-app.get("/", (req,res)=>{
+app.get("/", (req, res) => {
 
-res.send("ATS Analyzer Backend Working");
-
-});
-
-
-
-app.post("/analyze", upload.single("cv"), async (req,res)=>{
-
-try{
-
-
-if(!req.file){
-
-return res.status(400).json({
-
-error:true,
-
-message:"No file uploaded"
-
-});
-
-}
-
-
-
-const uploadedFile =
-await openai.files.create({
-
-file: fs.createReadStream(req.file.path),
-
-purpose:"user_data"
+    res.send("ATS Analyzer Backend Working");
 
 });
 
 
 
-const response =
-await openai.responses.create({
+app.post("/analyze", upload.single("cv"), async (req, res) => {
 
-model:"gpt-5.2",
-
-response_format:{type:"json_object"},
+    try {
 
 
-input:[
+        if (!req.file) {
 
-{
+            return res.status(400).json({
 
-role:"user",
+                error: true,
 
-content:[
+                message: "No file uploaded"
 
-{
+            });
 
-type:"input_text",
+        }
 
-text:`
+
+
+        const uploadedFile =
+            await openai.files.create({
+
+                file: fs.createReadStream(req.file.path),
+
+                purpose: "user_data"
+
+            });
+
+
+
+        const response =
+            await openai.responses.create({
+
+                model: "gpt-5.2",
+
+                response_format: { type: "json_object" },
+
+
+                input: [
+
+                    {
+
+                        role: "user",
+
+                        content: [
+
+                            {
+
+                                type: "input_text",
+
+                                text: `
 
 Analyze resume and return:
 
@@ -149,64 +149,66 @@ ATS 0-100
 
 `
 
-},
+                            },
 
-{
+                            {
 
-type:"input_file",
+                                type: "input_file",
 
-file_id: uploadedFile.id
+                                file_id: uploadedFile.id
 
-}
+                            }
 
-]
+                        ]
 
-}
+                    }
 
-]
+                ]
+
+            });
+
+
+
+        const text =
+            response.output?.[0]?.content?.[0]?.text || "{}";
+
+
+        const result = JSON.parse(text);
+
+
+        res.json(result);
+
+
+        fs.unlinkSync(req.file.path);
+
+
+
+    } catch (e) {
+
+        console.log(e);
+
+        if (req.file) {
+            fs.unlinkSync(req.file.path);
+        }
+
+        res.status(500).json({
+
+            error: true,
+
+            message: e.message
+
+        });
+
+    }
 
 });
 
 
 
-const text =
-response.output?.[0]?.content?.[0]?.text || "{}";
+const PORT = process.env.PORT || 3000;
 
+app.listen(PORT, () => {
 
-const result = JSON.parse(text);
-
-
-res.json(result);
-
-
-fs.unlinkSync(req.file.path);
-
-
-
-}catch(e){
-
-console.log(e);
-
-if(req.file){
-fs.unlinkSync(req.file.path);
-}
-
-res.status(500).json({
-
-error:true,
-
-message:e.message
-
-});
-
-}
-
-});
-
-
-
-app.listen(3000, ()=>{
-
-console.log("Server running on http://localhost:3000");
+    console.log("Server running on port " + PORT);
 
 });
