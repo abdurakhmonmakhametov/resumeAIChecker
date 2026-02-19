@@ -13,19 +13,21 @@ app.use(cors());
 app.use(express.json());
 
 
-// ✅ ensure uploads folder exists
+// ✅ Absolute uploads path (Railway safe)
 
-if (!fs.existsSync("uploads")) {
-    fs.mkdirSync("uploads");
+const uploadDir = path.join(__dirname, "uploads");
+
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 
-// ✅ storage config
+// ✅ Multer storage
 
 const storage = multer.diskStorage({
 
     destination: (req, file, cb) => {
-        cb(null, "uploads/");
+        cb(null, uploadDir);
     },
 
     filename: (req, file, cb) => {
@@ -65,8 +67,7 @@ const openai = new OpenAI({
 });
 
 
-
-// ✅ test route
+// ✅ Health route
 
 app.get("/", (req, res) => {
 
@@ -75,8 +76,7 @@ app.get("/", (req, res) => {
 });
 
 
-
-// ✅ analyze route
+// ✅ Main analyze route
 
 app.post("/analyze", upload.single("cv"), async (req, res) => {
 
@@ -94,7 +94,7 @@ app.post("/analyze", upload.single("cv"), async (req, res) => {
         }
 
 
-        // upload PDF to OpenAI
+        // upload file to OpenAI
 
         const uploadedFile = await openai.files.create({
 
@@ -106,7 +106,7 @@ app.post("/analyze", upload.single("cv"), async (req, res) => {
 
 
 
-        // ✅ FIXED PARAMETER HERE
+        // ✅ FIXED JSON FORMAT PROMPT
 
         const response = await openai.responses.create({
 
@@ -130,20 +130,31 @@ app.post("/analyze", upload.single("cv"), async (req, res) => {
 
                             text: `
 
-Analyze resume and return:
+Analyze this resume and return the result in JSON format.
+
+Return ONLY valid JSON:
 
 {
-ats_score:number,
-message:string,
-status:string,
-weaknesses:string[],
-improvements:string[]
+"ats_score": number,
+"message": string,
+"status": "ready" or "not ready",
+"weaknesses": string[],
+"improvements": string[]
 }
 
 Rules:
-ATS 0-100
->=70 ready
-<70 not ready
+
+ATS score must be between 0 and 100
+
+If ATS >= 70:
+message: "Ajoyib! Sizning resumeyiz ishga tayor."
+status: "ready"
+
+If ATS < 70:
+message: "Resumeyiz hali tayor emas."
+status: "not ready"
+
+Weaknesses maximum 4 items.
 
 `
 
@@ -180,7 +191,9 @@ ATS 0-100
 
         // cleanup
 
-        fs.unlinkSync(req.file.path);
+        if (fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
 
 
     }
@@ -205,10 +218,12 @@ ATS 0-100
 });
 
 
+// ✅ Railway-safe listen
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, "0.0.0.0", () => {
 
-  console.log("Server running on port " + PORT);
+    console.log("Server running on port " + PORT);
 
 });
