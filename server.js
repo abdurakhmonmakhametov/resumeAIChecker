@@ -130,31 +130,56 @@ app.post("/analyze", upload.single("cv"), async (req, res) => {
 
                             text: `
 
-Analyze this resume and return the result in JSON format.
+
+Analyze this resume like a modern ATS system BUT be FAIR, REALISTIC and SLIGHTLY POSITIVE.
+
+Important scoring rules:
+
+• Most resumes should score between 70 and 90
+• Only very bad resumes below 60
+• Only exceptional resumes above 90
+
+Do NOT be overly strict.
+
+Focus on:
+
+• structure
+• readability
+• skills
+• clarity
+• completeness
 
 Return ONLY valid JSON:
 
 {
 "ats_score": number,
 "message": string,
-"status": "ready" or "not ready",
+"status": "Tayor" or "Hali Tayor emas!",
 "weaknesses": string[],
 "improvements": string[]
 }
 
-Rules:
+Status rules:
 
-ATS score must be between 0 and 100
-
-If ATS >= 70:
+If ats_score >= 70:
 message: "Ajoyib! Sizning resumeyiz ishga tayor."
-status: "ready"
+status: "Tayor"
 
-If ATS < 70:
+If ats_score < 70:
 message: "Resumeyiz hali tayor emas."
-status: "not ready"
+status: "Hali Tayor emas!"
 
-Weaknesses maximum 4 items.
+Weaknesses:
+• maximum 3 items
+• keep simple
+• do NOT be harsh
+
+Improvements:
+• maximum 4 items
+• keep simple
+• practical advice
+
+Be supportive, professional and balanced.
 
 `
 
